@@ -41,22 +41,60 @@ typedef struct vm_array_object {
 
 
 
+enum md_member_visibility
+{
+    md_member_visibility_public,
+    md_member_visibility_private,
+    md_member_visibility_protected,
+    md_member_visibility_internal,
+    md_member_visibility_protected_internal
+};
+
+enum md_parameter_direction {
+    in,
+    out,
+    ref
+};
+
 typedef struct md_parameter_decs {
+    ptr_md_method_table paramter_type;
+    md_parameter_direction attributes;
+    void* default_value;
+};
 
+enum md_method_attributes {
+    instance_method,
+    static_method,
+    local_method,
+    tail_recursive,
+};
 
+typedef struct md_member_desc {
+    ptr_md_method_table instance_type;
+    md_member_visibility visibility;
+    LPCWSTR name;
 };
 
 typedef struct md_method_desc {
+    md_member_desc base_info;
     ptr_md_method_table return_type;
-    uint16_t parametrs_count;
-    uint16_t method_attributes;
-    uint16_t parametrs_count1;
+    md_method_attributes attributes;
+    uint16_t parameters_count;
+    uint16_t generic_parametrs_count;
     uint16_t parametrs_count2;
     md_parameter_decs* parameters;
 };
 
-typedef struct md_field_desc {
+enum md_field_attributes {
+    instance_field,
+    static_field,
+};
 
+
+
+typedef struct md_field_desc {
+    ptr_md_method_table field_type;
+    ptr_md_method_table instance_type;
 };
 
 typedef struct md_property_desc {
@@ -75,8 +113,8 @@ typedef struct gc_allocation_info {
     uint8_t region_node_allocated : 1;
     uint8_t page0_allocated : 1;
     uint8_t page1_allocated : 1;
-    uint8_t page2_allocated : 1;
     uint8_t page3_allocated : 1;
+    uint8_t page2_allocated : 1;
     uint8_t page4_allocated : 1;
     uint8_t numa_node;
     uint8_t region_index;
@@ -92,9 +130,11 @@ typedef struct md_method_table {
     uint16_t fields_count;
     uint16_t property_count;
     uint16_t interface_count;
+    uint16_t generic_paramters_count;
     md_method_desc* methods;
     md_field_desc* fields;
     md_property_desc* properties;
+    md_method_table** generic_parameters;
     md_interface_mapping* interface_mappings;
 }* ptr_md_method_table;
 
@@ -431,6 +471,10 @@ static void* os_realloc() {
 
 static void os_free(void* ptr) {
     
+}
+
+static void rt_invoke_method(md_method_desc* methodDesc) {
+
 }
 
 typedef void (*thread_start_routine)(void* param);
