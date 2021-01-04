@@ -1,8 +1,7 @@
 ﻿// xrt.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
-#include <iostream>
-
+#include<stdint.h>
 #include<Windows.h>
 
 
@@ -34,9 +33,6 @@ typedef struct vm_primitive_type {
     ptr_md_method_table method_table;
 };
 
-static const vm_primitive_type g_vm_primitive_types[14] = {
-
-};
 
 typedef struct vm_array_object {
     uint64_t length;
@@ -243,24 +239,6 @@ typedef struct gc_instance
 
 static ptr_gc_instance g_gc_instance = 0;
 
-
-
-static void LogErrorMessage(LPCWSTR file, LPCWSTR func, int line, DWORD errorCode)
-{
-    TCHAR* buffer;
-    ::FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-        NULL,
-        errorCode,
-        0,
-        (LPTSTR)&buffer,
-        0,
-        NULL);
-    // Buffer contains "  Bi Bob   Bill".
-    wprintf(L"File:%s Function:%s  Line:%d:Error: %s\n", file, func, line, buffer);
-    LocalFree(buffer);
-}
-
 static ptr_md_method_table vm_get_object_method_table(vm_object_address obj) {
     int size = sizeof(gc_blob_page_entry);
     uint64_t start_address = (obj.address_bits >> 40);
@@ -360,19 +338,11 @@ static void* os_create_file_mapping() {
         g_gc_instance->file_mapping_flags,
         g_gc_instance->file_mapping_size_hign,
         g_gc_instance->file_mapping_size_low, nullptr);
-    if (hFileMapping==nullptr)
-    {
-        LogErrorMessage(__FILEW__, __FUNCTIONW__, __LINE__, GetLastError());
-    }
     return hFileMapping;
 }
 
 static void* os_map_view_of_file(void* hFileMapping, void* pBaseAddress) {
     void* pAddress = MapViewOfFileEx(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, g_gc_instance->file_map_size, pBaseAddress);
-    if (pAddress == nullptr)
-    {
-        LogErrorMessage(__FILEW__, __FUNCTIONW__, __LINE__, GetLastError());
-    }
     return pAddress;
 }
 
@@ -451,10 +421,6 @@ static void* os_malloc(size_t size) {
         return nullptr;
     }
     void* ptr = VirtualAlloc(g_gc_instance->os_new_base_address, size, MEM_COMMIT, PAGE_READWRITE);
-    if (ptr == nullptr)
-    {
-        LogErrorMessage(__FILEW__, __FUNCTIONW__, __LINE__, GetLastError());
-    }
     g_gc_instance->os_new_base_address = (void*)((size_t)g_gc_instance->os_new_base_address + size);
     return ptr;
 }
@@ -521,7 +487,6 @@ static bool gc_initialize() {
     if (g_gc_instance == nullptr)
     {
         gc_instance gc_instance_object;
-        memset(&gc_instance_object, 0, sizeof(gc_instance_object));
         g_gc_instance = &gc_instance_object;
         gc_instance_object.vm_address = 0x0;
 
@@ -548,7 +513,7 @@ static bool gc_initialize() {
         gc_instance_object.gc_instance_base_address = gc_instance_object.map0_view_base_address;
         gc_instance_object.os_new_base_address = gc_instance_object.map0_view_base_address;
         ptr_gc_instance p_gc_instance = (ptr_gc_instance)os_malloc(gc_instance_object.gc_instance_size);
-        memcpy(p_gc_instance, &gc_instance_object, sizeof(gc_instance_object));
+
         g_gc_instance = p_gc_instance;
     }
     return true;
@@ -577,7 +542,7 @@ static void gc_trigger() {
 
 
 static object_address gc_object_alloc(ptr_gc_object_page object_page, ptr_md_method_table method_table) {
-    object_address obj = { 0 };
+    object_address obj;
     if (object_page == nullptr || method_table == nullptr)
     {
         return obj;
@@ -687,7 +652,7 @@ static ptr_gc_region gc_region_alloc(ptr_gc_numa_node numa_node, gc_region_flags
 }
 
 static vm_object_address gc_object_new(ptr_md_method_table method_table) {
-    vm_object_address object_address = { 0 };
+    vm_object_address object_address;
     if (g_gc_instance == nullptr)
     {
         return   object_address;
@@ -707,7 +672,6 @@ static vm_object_address gc_array_new(ptr_md_method_table method_table, uint64_t
 int main()
 {
     int size = sizeof(gc_allocation_info);
-    setlocale(LC_ALL, "zh-cn");
     gc_initialize();
     gc_object_new(nullptr);
 
